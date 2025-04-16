@@ -18,6 +18,7 @@ conda env create -f enviroments.yaml
 run the server process.
 
 ```
+conda activate secure_coding
 python app.py
 ```
 
