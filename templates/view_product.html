@@ -25,4 +25,8 @@
   </form>
 {% endif %}
 
+<a href="{{ url_for('report', target_id=product.id) }}">
+    <button style="background-color: red; color: white;">🚨 이 상품 신고하기</button>
+  </a>
+
 {% endblock %}

@@ -21,8 +21,9 @@
   </a>
 {% endif %}
 
-<a href="{{ url_for('dashboard') }}">← 대시보드</a>
+
 <a href="{{ url_for('report', target_id=user.id) }}">
     <button style="background-color: red; color: white;">🚨 신고하기</button>
-  </a>
+</a>
+<a href="{{ url_for('dashboard') }}">← 대시보드</a>
 {% endblock %}
