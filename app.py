@@ -272,17 +272,20 @@ def transfer(target_id):
             tx_id = str(uuid.uuid4())
             timestamp = datetime.now().isoformat()
 
-            cursor.execute("UPDATE user SET balance = balance - ? WHERE id = ?", (amount, sender_id))
-            cursor.execute("UPDATE user SET balance = balance + ? WHERE id = ?", (amount, target_id))
-
-            cursor.execute("""
-                INSERT INTO transactions (id, sender_id, receiver_id, amount, timestamp)
-                VALUES (?, ?, ?, ?, ?)
-            """, (tx_id, sender_id, target_id, amount, timestamp))
-
-            db.commit()
-            flash(f"{target_user['username']}님에게 {amount}원을 송금했습니다.")
-            return redirect(url_for('transfer', target_id=target_id))
+            try:
+                with db:  # 트랜잭션 - 중간 오류 발생시 생길 수 있는 문제 수정
+                    cursor.execute("UPDATE user SET balance = balance - ? WHERE id = ?", (amount, sender_id))
+                    cursor.execute("UPDATE user SET balance = balance + ? WHERE id = ?", (amount, target_id))
+                    cursor.execute("""
+                        INSERT INTO transactions (id, sender_id, receiver_id, amount, timestamp)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (tx_id, sender_id, target_id, amount, timestamp))
+                flash(f"{target_user['username']}님에게 {amount}원을 송금했습니다.")
+                return redirect(url_for('transfer', target_id=target_id))
+            except Exception as e:
+                db.rollback()  # 예외 발생 시 수동 롤백
+                flash("송금 처리 중 오류가 발생했습니다.")
+                print(f"[송금 오류] {e}")
 
     return render_template(
         'transfer.html',
@@ -290,6 +293,7 @@ def transfer(target_id):
         target_name=target_user['username'],
         balance=sender_balance
     )
+
 
 
 # 판매자 정보 보기
