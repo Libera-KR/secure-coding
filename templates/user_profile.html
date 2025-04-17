@@ -2,15 +2,15 @@
 {% block title %}판매자 프로필{% endblock %}
 
 {% block content %}
-<h2>{{ user.username }}님의 프로필</h2>
-<p><strong>사용자 ID:</strong> {{ user.id }}</p>
-<p><strong>소개글:</strong> {{ user.bio or '소개글 없음' }}</p>
+<h2>{{ user.username | e}}님의 프로필</h2>
+<p><strong>사용자 ID:</strong> {{ user.id | e}}</p>
+<p><strong>소개글:</strong> {{ user.bio or '소개글 없음' | e}}</p>
 
 <h3>등록한 상품 목록</h3>
 <ul>
   {% for product in products %}
     <li>
-      <a href="{{ url_for('view_product', product_id=product.id) }}">{{ product.title }}</a>
+      <a href="{{ url_for('view_product', product_id=product.id) }}">{{ product.title | e}}</a>
     </li>
   {% endfor %}
 </ul>
@@ -26,7 +26,7 @@
     <button>💸 송금하기</button>
   </a>
 {% else %}
-  <p><strong>보유 금액:</strong> {{ balance }}원</p>
+  <p><strong>보유 금액:</strong> {{ balance | e}}원</p>
 {% endif %}
 
 <a href="{{ url_for('report', target_id=user.id) }}">

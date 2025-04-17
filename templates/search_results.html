@@ -2,14 +2,14 @@
 {% block title %}검색 결과{% endblock %}
 
 {% block content %}
-<h2>검색 결과: "{{ query }}"</h2>
+<h2>검색 결과: "{{ query | e}}"</h2>
 
 {% if results %}
   <ul>
     {% for product in results %}
       <li>
         <a href="{{ url_for('view_product', product_id=product.id) }}">
-          {{ product.title }}
+          {{ product.title | e}}
         </a>
       </li>
     {% endfor %}

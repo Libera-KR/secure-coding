@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}송금하기{% endblock %}
 {% block content %}
-<h2>{{ target_name }}님에게 송금</h2>
-<p><strong>내 잔액:</strong> {{ balance }}원</p>
+<h2>{{ target_name | e}}님에게 송금</h2>
+<p><strong>내 잔액:</strong> {{ balance | e}}원</p>
 
 <form method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

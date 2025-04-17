@@ -10,7 +10,7 @@
 <ul>
   {% for product in products %}
     <li>
-      <a href="{{ url_for('view_product', product_id=product.id) }}">{{ product.title }}</a>
+      <a href="{{ url_for('view_product', product_id=product.id) }}">{{ product.title | e }}</a>
       <!--- 가격: {{ product.price }}-->
     </li>
   {% endfor %}
@@ -34,9 +34,17 @@
     var messages = document.getElementById('messages');
     var item = document.createElement('li');
 
-    var userLink = `<a href="/user/${data.user_id}">${data.username}</a>`;
-    item.innerHTML = userLink + ": " + data.message;
+    // XSS 방어
+    var userLink = document.createElement('a');
+    userLink.href = `/user/${data.user_id}`;
+    userLink.innerText = data.username;
 
+    // 메시지 텍스트만 안전하게 추가
+    var messageText = document.createTextNode(": " + data.message);
+
+    // 메시지 조합
+    item.appendChild(userLink);
+    item.appendChild(messageText);
     messages.appendChild(item);
     window.scrollTo(0, document.body.scrollHeight);
   });

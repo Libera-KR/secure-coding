@@ -13,10 +13,10 @@
   </tr>
   {% for r in reports %}
   <tr>
-    <td>{{ r.id }}</td>
-    <td>{{ r.reporter_id }}</td>
-    <td>{{ r.target_id }}</td>
-    <td>{{ r.reason }}</td>
+    <td>{{ r.id | e}}</td>
+    <td>{{ r.reporter_id | e}}</td>
+    <td>{{ r.target_id | e}}</td>
+    <td>{{ r.reason | e}}</td>
     <td>
       <form method="POST" action="{{ url_for('delete_report', report_id=r.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
