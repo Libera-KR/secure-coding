@@ -2,7 +2,11 @@
 {% block title %}상품 상세보기{% endblock %}
 {% block content %}
 <h2>{{ product.title }}</h2>
-<p>{{ product.description }}</p>
+
+{% if product.image_path %}
+<img src="{{ url_for('static', filename=product.image_path) }}" alt="상품 이미지" width="300">
+{% endif %}
+<p>설명: <br>{{ product.description }}</p>
 <p>가격: {{ product.price }}</p>
 <p>판매자: {{ seller.username if seller else '알 수 없음' }}</p>
 {% endblock %}

@@ -1,13 +1,17 @@
-import bcrypt
+import bcrypt, os
 import sqlite3
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 from flask_socketio import SocketIO, send
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 DATABASE = 'market.db'
 socketio = SocketIO(app)
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # 데이터베이스 연결 관리: 요청마다 연결 생성 후 사용, 종료 시 close
 def get_db():
@@ -187,21 +191,36 @@ def profile():
     
     return render_template('profile.html', user=current_user)
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 # 상품 등록
 @app.route('/product/new', methods=['GET', 'POST'])
 def new_product():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    
     if request.method == 'POST':
         title = request.form['title']
         description = request.form['description']
         price = request.form['price']
+        file = request.files.get('image')
+
+        image_path = None
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_path = os.path.join('uploads', filename)
+
         db = get_db()
         cursor = db.cursor()
         product_id = str(uuid.uuid4())
         cursor.execute(
-            "INSERT INTO product (id, title, description, price, seller_id) VALUES (?, ?, ?, ?, ?)",
-            (product_id, title, description, price, session['user_id'])
+            "INSERT INTO product (id, title, description, price, seller_id, image_path) VALUES (?, ?, ?, ?, ?, ?)",
+            (product_id, title, description, price, session['user_id'], image_path)
         )
         db.commit()
         flash('상품이 등록되었습니다.')
