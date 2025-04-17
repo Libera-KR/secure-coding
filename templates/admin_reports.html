@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}신고 내역 관리{% endblock %}
+
+{% block content %}
+<h2>📄 신고 내역</h2>
+<table border="1" cellpadding="8">
+  <tr>
+    <th>ID</th>
+    <th>신고자</th>
+    <th>대상</th>
+    <th>사유</th>
+    <th>시간</th>
+    <th>관리</th>
+  </tr>
+  {% for r in reports %}
+  <tr>
+    <td>{{ r.id }}</td>
+    <td>{{ r.reporter_id }}</td>
+    <td>{{ r.target_id }}</td>
+    <td>{{ r.reason }}</td>
+    <td>{{ r.timestamp }}</td>
+    <td>
+      <form method="POST" action="{{ url_for('delete_report', report_id=r.id) }}">
+        <button type="submit" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

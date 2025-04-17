@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_socketio import SocketIO, send
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -13,6 +14,27 @@ socketio = SocketIO(app)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# 관리자 확인 데코레이터 함수 생성
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        db = get_db()
+        cursor = db.cursor()
+        user_id = session.get('user_id')
+
+        if not user_id:
+            flash("로그인이 필요합니다.")
+            return redirect(url_for('login'))
+
+        cursor.execute("SELECT role FROM user WHERE id = ?", (user_id,))
+        user = cursor.fetchone()
+        if not user or user['role'] != 'admin':
+            flash("관리자 권한이 필요합니다.")
+            return redirect(url_for('dashboard'))
+
+        return f(*args, **kwargs)
+    return decorated_function
 
 # 데이터베이스 연결 관리: 요청마다 연결 생성 후 사용, 종료 시 close
 def get_db():
@@ -106,7 +128,11 @@ def login():
         cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
         user = cursor.fetchone()
         if user and bcrypt.checkpw(raw_password.encode('utf-8'), user['password']):
+            if user['status'] == 'suspended':
+                flash("휴먼 계정으로 전환된 상태입니다. 로그인할 수 없습니다.")
+                return redirect(url_for('login'))
             session['user_id'] = user['id']
+            session['role'] = user['role']
             flash('로그인 성공!')
             return redirect(url_for('dashboard'))
         else:
@@ -118,6 +144,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
+    session.pop('role', None)
     flash('로그아웃되었습니다.')
     return redirect(url_for('index'))
 
@@ -455,6 +482,32 @@ def report():
         return redirect(url_for('dashboard'))
 
     return render_template('report.html', target_id=target_id)
+
+# 관리자 페이지 (신고 내용 조회)
+@app.route('/admin/reports')
+@admin_required
+def view_reports():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT r.id, r.reporter_id, r.target_id, r.reason
+        FROM report r
+        ORDER BY r.id DESC
+    """)
+    reports = cursor.fetchall()
+    return render_template('admin_reports.html', reports=reports)
+
+# 신고 내역 삭제
+@app.route('/admin/reports/delete/<report_id>', methods=['POST'])
+@admin_required
+def delete_report(report_id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM report WHERE id = ?", (report_id,))
+    db.commit()
+    flash("신고 내역이 삭제되었습니다.")
+    return redirect(url_for('view_reports'))
+
 
 
 # 실시간 채팅: 클라이언트가 메시지를 보내면 전체 브로드캐스트
