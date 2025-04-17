@@ -332,6 +332,23 @@ def delete_product(product_id):
     flash('상품이 삭제되었습니다.')
     return redirect(url_for('dashboard'))
 
+@app.route('/search')
+def search():
+    query = request.args.get('q', '').strip()
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT * FROM product
+        WHERE title LIKE ? OR description LIKE ?
+    """, (f'%{query}%', f'%{query}%'))
+    
+    results = cursor.fetchall()
+
+    return render_template('search_results.html', query=query, results=results)
+
+
 # 신고하기
 @app.route('/report', methods=['GET', 'POST'])
 def report():
