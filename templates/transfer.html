@@ -5,6 +5,7 @@
 <p><strong>내 잔액:</strong> {{ balance }}원</p>
 
 <form method="POST">
+    {{ csrf_token() }}
   <label for="amount">금액:</label>
   <input type="number" name="amount" required min="1">
   <button type="submit">송금</button>

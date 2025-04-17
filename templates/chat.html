@@ -11,6 +11,7 @@
 </div>
 
 <form method="post">
+  {{ csrf_token() }}
   <input type="text" name="content" required placeholder="메시지를 입력하세요">
   <button type="submit">전송</button>
 </form>

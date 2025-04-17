@@ -6,6 +6,7 @@ from flask_socketio import SocketIO, send
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from functools import wraps
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
