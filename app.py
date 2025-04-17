@@ -9,12 +9,19 @@ from functools import wraps
 from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key'
 app.config['SECRET_KEY'] = 'secret!'
 DATABASE = 'market.db'
 socketio = SocketIO(app)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+csrf = CSRFProtect(app)
+
+# CSRF 토큰 예외처리
+@app.errorhandler(400)
+def handle_csrf_error(e):
+    return render_template("error.html", message="CSRF 토큰이 유효하지 않습니다."), 400
 
 # 관리자 확인 데코레이터 함수 생성
 def admin_required(f):
