@@ -15,5 +15,11 @@
   {% endfor %}
 </ul>
 
+{% if session.get('user_id') != user.id %}
+  <a href="{{ url_for('chat', user_id=user.id) }}">
+    <button>💬 1:1 채팅하기</button>
+  </a>
+{% endif %}
+
 <a href="{{ url_for('dashboard') }}">← 대시보드</a>
 {% endblock %}

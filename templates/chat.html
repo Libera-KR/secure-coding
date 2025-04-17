@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ partner.username }}님과의 채팅{% endblock %}
+
+{% block content %}
+<h2>{{ partner.username }}님과의 1:1 채팅</h2>
+
+<div style="border:1px solid #ccc; padding:10px; height:300px; overflow-y:scroll;">
+  {% for m in messages %}
+    <p><strong>{{ '나' if m.sender_id == session['user_id'] else partner.username }}:</strong> {{ m.content }}</p>
+  {% endfor %}
+</div>
+
+<form method="post">
+  <input type="text" name="content" required placeholder="메시지를 입력하세요">
+  <button type="submit">전송</button>
+</form>
+
+<div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+    <button onclick="history.back()" style="flex: 1; padding: 10px;">← 뒤로 가기</button>
+    <a href="{{ url_for('dashboard') }}" style="flex: 1;">
+      <button style="width: 100%; padding: 10px;">🏠 대시보드</button>
+    </a>
+  </div>
+
+{% endblock %}

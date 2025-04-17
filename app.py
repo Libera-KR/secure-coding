@@ -4,6 +4,7 @@ import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 from flask_socketio import SocketIO, send
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -347,6 +348,45 @@ def search():
     results = cursor.fetchall()
 
     return render_template('search_results.html', query=query, results=results)
+
+@app.route('/chat/<user_id>', methods=['GET', 'POST'])
+def chat(user_id):
+    if 'user_id' not in session:
+        flash('로그인이 필요합니다.')
+        return redirect(url_for('login'))
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # 상대 유저 정보
+    cursor.execute("SELECT id, username FROM user WHERE id = ?", (user_id,))
+    partner = cursor.fetchone()
+    if not partner:
+        flash("상대방을 찾을 수 없습니다.")
+        return redirect(url_for('dashboard'))
+
+    # 메시지 저장
+    if request.method == 'POST':
+        content = request.form['content']
+        msg_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+
+        cursor.execute("""
+            INSERT INTO message (id, sender_id, receiver_id, content, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, (msg_id, session['user_id'], user_id, content, timestamp))
+        db.commit()
+
+    # 메시지 조회 (양방향)
+    cursor.execute("""
+        SELECT * FROM message
+        WHERE (sender_id = ? AND receiver_id = ?)
+           OR (sender_id = ? AND receiver_id = ?)
+        ORDER BY timestamp ASC
+    """, (session['user_id'], user_id, user_id, session['user_id']))
+    messages = cursor.fetchall()
+
+    return render_template('chat.html', partner=partner, messages=messages)
 
 
 # 신고하기
