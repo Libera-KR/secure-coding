@@ -1,3 +1,4 @@
+import bcrypt
 import sqlite3
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
@@ -69,7 +70,9 @@ def index():
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        raw_password = request.form['password']
+        hashed_pw = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
+
         db = get_db()
         cursor = db.cursor()
         # 중복 사용자 체크
@@ -77,9 +80,10 @@ def register():
         if cursor.fetchone() is not None:
             flash('이미 존재하는 사용자명입니다.')
             return redirect(url_for('register'))
+        
         user_id = str(uuid.uuid4())
         cursor.execute("INSERT INTO user (id, username, password) VALUES (?, ?, ?)",
-                       (user_id, username, password))
+                       (user_id, username, hashed_pw))
         db.commit()
         flash('회원가입이 완료되었습니다. 로그인 해주세요.')
         return redirect(url_for('login'))
@@ -90,12 +94,13 @@ def register():
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
+        raw_password = request.form['password']
+        
         db = get_db()
         cursor = db.cursor()
-        cursor.execute("SELECT * FROM user WHERE username = ? AND password = ?", (username, password))
+        cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
         user = cursor.fetchone()
-        if user:
+        if user and bcrypt.checkpw(raw_password.encode('utf-8'), user['password']):
             session['user_id'] = user['id']
             flash('로그인 성공!')
             return redirect(url_for('dashboard'))
