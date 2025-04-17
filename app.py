@@ -132,7 +132,7 @@ def dashboard():
     cursor.execute("SELECT * FROM user WHERE id = ?", (session['user_id'],))
     current_user = cursor.fetchone()
     # 모든 상품 조회
-    cursor.execute("SELECT * FROM product")
+    cursor.execute("SELECT * FROM product WHERE is_blocked = 0")
     all_products = cursor.fetchall()
     return render_template('dashboard.html', products=all_products, user=current_user)
 
@@ -258,9 +258,18 @@ def view_product(product_id):
     cursor = db.cursor()
     cursor.execute("SELECT * FROM product WHERE id = ?", (product_id,))
     product = cursor.fetchone()
+    
+    if not product or product['is_blocked']:
+        flash("해당 상품은 차단되어 접근할 수 없습니다.")
+        return redirect(url_for('dashboard'))
+    
     if not product:
         flash('상품을 찾을 수 없습니다.')
         return redirect(url_for('dashboard'))
+    elif product['is_blocked']:
+        flash("해당 상품은 차단되어 접근할 수 없습니다.")
+        return redirect(url_for('dashboard'))
+    
     # 판매자 정보 조회
     cursor.execute("SELECT * FROM user WHERE id = ?", (product['seller_id'],))
     seller = cursor.fetchone()
@@ -393,21 +402,60 @@ def chat(user_id):
 @app.route('/report', methods=['GET', 'POST'])
 def report():
     if 'user_id' not in session:
+        flash("로그인이 필요합니다.")
         return redirect(url_for('login'))
+
+    target_id = request.args.get('target_id', '')
+
     if request.method == 'POST':
-        target_id = request.form['target_id']
-        reason = request.form['reason']
+        reporter_id = session['user_id']
+        reported_id = request.form['target_id'].strip()
+        reason = request.form['reason'].strip()
+
+        if not reported_id or not reason:
+            flash("신고 대상과 사유는 필수입니다.")
+            return redirect(url_for('report'))
+
+        report_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+
         db = get_db()
         cursor = db.cursor()
-        report_id = str(uuid.uuid4())
-        cursor.execute(
-            "INSERT INTO report (id, reporter_id, target_id, reason) VALUES (?, ?, ?, ?)",
-            (report_id, session['user_id'], target_id, reason)
-        )
+        cursor.execute("""
+            INSERT INTO report (id, reporter_id, reported_id, reason, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, (report_id, reporter_id, reported_id, reason, timestamp))
         db.commit()
-        flash('신고가 접수되었습니다.')
+
+        # 신고 처리 후 누적 횟수 확인 및 조치
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM report WHERE reported_id = ?
+        """, (reported_id,))
+        count = cursor.fetchone()['count']
+
+        # 신고 대상이 사용자일 경우 (user 테이블에 존재)
+        cursor.execute("SELECT * FROM user WHERE id = ?", (reported_id,))
+        target_user = cursor.fetchone()
+        if target_user and count >= 3 and target_user['status'] != 'suspended':
+            cursor.execute("""
+                UPDATE user SET status = 'suspended' WHERE id = ?
+            """, (reported_id,))
+            flash("해당 유저는 신고 누적으로 휴먼 계정으로 전환되었습니다.")
+
+        # 신고 대상이 상품일 경우 (product 테이블에 존재)
+        cursor.execute("SELECT * FROM product WHERE id = ?", (reported_id,))
+        target_product = cursor.fetchone()
+        if target_product and count >= 3 and not target_product['is_blocked']:
+            cursor.execute("""
+                UPDATE product SET is_blocked = 1 WHERE id = ?
+            """, (reported_id,))
+            flash("해당 상품은 신고 누적으로 차단되었습니다.")
+
+        flash("신고가 접수되었습니다.")
         return redirect(url_for('dashboard'))
-    return render_template('report.html')
+
+    return render_template('report.html', target_id=target_id)
+
 
 # 실시간 채팅: 클라이언트가 메시지를 보내면 전체 브로드캐스트
 @socketio.on('send_message')
