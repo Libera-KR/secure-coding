@@ -191,6 +191,29 @@ def profile():
     
     return render_template('profile.html', user=current_user)
 
+# 판매자 정보 보기
+@app.route('/user/<user_id>')
+def view_user_profile(user_id):
+    db = get_db()
+    cursor = db.cursor()
+
+    # 판매자 정보 가져오기
+    cursor.execute("SELECT id, username, bio FROM user WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+
+    if not user:
+        flash('해당 사용자를 찾을 수 없습니다.')
+        return redirect(url_for('dashboard'))
+
+    # 해당 사용자가 올린 상품 리스트
+    cursor.execute("SELECT id, title FROM product WHERE seller_id = ?", (user_id,))
+    products = cursor.fetchall()
+
+    return render_template('user_profile.html', user=user, products=products)
+
+
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

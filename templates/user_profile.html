@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}판매자 프로필{% endblock %}
+
+{% block content %}
+<h2>{{ user.username }}님의 프로필</h2>
+<p><strong>사용자 ID:</strong> {{ user.id }}</p>
+<p><strong>소개글:</strong> {{ user.bio or '소개글 없음' }}</p>
+
+<h3>등록한 상품 목록</h3>
+<ul>
+  {% for product in products %}
+    <li>
+      <a href="{{ url_for('view_product', product_id=product.id) }}">{{ product.title }}</a>
+    </li>
+  {% endfor %}
+</ul>
+
+<a href="{{ url_for('dashboard') }}">← 대시보드</a>
+{% endblock %}
