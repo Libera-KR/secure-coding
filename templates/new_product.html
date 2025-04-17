@@ -4,10 +4,10 @@
 <h2>상품 등록</h2>
 <form method="post" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  상품명: <input type="text" name="title" required><br>
+  상품명: <input type="text" name="title" required required maxlength="20"><br>
   상품 설명: <br>
-  <textarea name="description" rows="4" cols="50" required></textarea><br>
-  가격: <input type="text" name="price" required><br>
+  <textarea name="description" rows="4" cols="50" required required maxlength="500"></textarea><br>
+  가격: <input type="text" name="price" required required maxlength="50"><br>
   상품 이미지: <br>
   <input type="file" name="image" accept="image/*"><br><br>
 

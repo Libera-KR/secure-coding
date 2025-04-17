@@ -8,7 +8,7 @@
     <input type="hidden" name="target_id" value="{{ target_id | e }}">
     신고 대상: <strong>{{ target_id | e}}</strong></p>
   {% else %}
-  신고 대상 (사용자ID 또는 상품ID): <input type="text" name="target_id" required><br>
+  신고 대상 (사용자ID 또는 상품ID): <input type="text" name="target_id" required maxlength="30" required><br>
   {% endif %}
   신고 사유: <br>
   <textarea name="reason" rows="4" cols="50" required></textarea><br>

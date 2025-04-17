@@ -7,7 +7,7 @@
 <form method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label for="amount">금액:</label>
-  <input type="number" name="amount" required min="1">
+  <input type="number" name="amount" required min="1" required maxlength="50">
   <button type="submit">송금</button>
 </form>
 
