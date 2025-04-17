@@ -17,6 +17,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 csrf = CSRFProtect(app)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,   # JS에서 쿠키 접근 차단
+    SESSION_COOKIE_SECURE=True,     # HTTPS일 때만 쿠키 전송 (개발 시 False 가능)
+    SESSION_COOKIE_SAMESITE='Lax'   # 외부 사이트에서의 쿠키 전송 제한 (추천: 'Lax')
+)
 
 # CSRF 토큰 예외처리
 @app.errorhandler(400)
