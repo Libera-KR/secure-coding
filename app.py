@@ -136,16 +136,55 @@ def dashboard():
 def profile():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    
     db = get_db()
     cursor = db.cursor()
-    if request.method == 'POST':
-        bio = request.form.get('bio', '')
-        cursor.execute("UPDATE user SET bio = ? WHERE id = ?", (bio, session['user_id']))
-        db.commit()
-        flash('프로필이 업데이트되었습니다.')
-        return redirect(url_for('profile'))
+
+    #유저 정보 로딩
     cursor.execute("SELECT * FROM user WHERE id = ?", (session['user_id'],))
     current_user = cursor.fetchone()
+
+    if request.method == 'POST':
+        bio = request.form.get('bio', '')
+        current_pw = request.form.get('current_password', '')
+        new_pw = request.form.get('new_password', '')
+        confirm_pw = request.form.get('confirm_password', '')
+
+        if len(bio) > 300:
+            flash('소개글은 300자 이내여야 합니다.')
+            return redirect(url_for('profile'))
+
+        cursor.execute("UPDATE user SET bio = ? WHERE id = ?", (bio, session['user_id']))
+
+        if current_pw and new_pw and confirm_pw:
+            if not current_pw or not new_pw or not confirm_pw:
+                flash('비밀번호 변경 시 모든 항목을 입력해야 합니다.')
+                return redirect(url_for('profile'))
+            
+            if len(new_pw) < 8:
+                flash('새 비밀번호는 최소 8자 이상이어야 합니다.')
+                return redirect(url_for('profile'))
+
+            if new_pw != confirm_pw:
+                flash("새 비밀번호와 확인 비밀 번호가 일치하지 않습니다.")
+                return redirect(url_for('profile'))
+            
+            if bcrypt.checkpw(current_pw.encode('utf-8'), current_user['password']):
+                hashed_pw = bcrypt.hashpw(new_pw.encode('utf-8'), bcrypt.gensalt())
+                cursor.execute("UPDATE user SET password = ? WHERE id = ?", (hashed_pw, session['user_id']))
+                db.commit()
+                flash('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
+                session.pop('user_id', None)
+                return redirect(url_for('login'))
+            else:
+                flash('현재 비밀번호가 올바르지 않습니다.')
+                return redirect(url_for('profile'))
+        else:
+            flash('프로필이 업데이트되었습니다.')
+
+        db.commit()
+        return redirect(url_for('profile'))
+    
     return render_template('profile.html', user=current_user)
 
 # 상품 등록

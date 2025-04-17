@@ -1,11 +1,57 @@
 {% extends "base.html" %}
 {% block title %}프로필{% endblock %}
+
 {% block content %}
 <h2>프로필 관리</h2>
 <p>사용자명: {{ user.username }}</p>
 <form method="post">
   소개글: <br>
   <textarea name="bio" rows="4" cols="50">{{ user.bio or '' }}</textarea><br>
+  
+  <h4>비밀번호 변경</h4>
+  <label for="current_password">현재 비밀번호:</label><br>
+  <input type="password" name="current_password"><br><br>
+
+  <label for="new_password">새 비밀번호:</label><br>
+  <input type="password" name="new_password"><br><br>
+
+  <label for="confirm_password">새 비밀번호 확인:</label><br>
+  <input type="password" name="confirm_password"><br><br>
+
   <button type="submit">프로필 업데이트</button>
 </form>
+
+<script>
+  function validateForm() {
+    const bio = document.forms[0]["bio"].value;
+    const current = document.forms[0]["current_password"].value;
+    const newPw = document.forms[0]["new_password"].value;
+    const confirm = document.forms[0]["confirm_password"].value;
+
+    if (bio.length > 300) {
+      alert("소개글은 300자 이내로 작성해주세요.");
+      return false;
+    }
+
+    if (current || newPw || confirm) {
+      if (!current || !newPw || !confirm) {
+        alert("비밀번호 변경 시 모든 항목을 입력해야 합니다.");
+        return false;
+      }
+
+      if (newPw.length < 8) {
+        alert("새 비밀번호는 최소 8자 이상이어야 합니다.");
+        return false;
+      }
+
+      if (newPw !== confirm) {
+        alert("새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
+        return false;
+      }
+    }
+
+    return true;
+  }
+</script>
+
 {% endblock %}
