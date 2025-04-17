@@ -330,9 +330,11 @@ def new_product():
         image_path = None
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
+            ext = filename.rsplit('.', 1)[1].lower()
+            ran_filename = f"{uuid.uuid4().hex}.{ext}"  # 랜덤 UUID + 확장자
             os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image_path = os.path.join('uploads', filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], ran_filename))
+            image_path = os.path.join('uploads', ran_filename)
 
         db = get_db()
         cursor = db.cursor()
