@@ -4,6 +4,7 @@
 {% block content %}
 <h2>프로필 관리</h2>
 <p>사용자명: {{ user.username }}</p>
+<p>보유 금액: {{ balance }}원</p>
 <form method="post">
   소개글: <br>
   <textarea name="bio" rows="4" cols="50">{{ user.bio or '' }}</textarea><br>

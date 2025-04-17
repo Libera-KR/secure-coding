@@ -217,7 +217,67 @@ def profile():
         db.commit()
         return redirect(url_for('profile'))
     
-    return render_template('profile.html', user=current_user)
+    return render_template('profile.html', user=current_user, balance=current_user['balance'])
+
+@app.route('/transfer/<target_id>', methods=['GET', 'POST'])
+def transfer(target_id):
+    if 'user_id' not in session:
+        flash("로그인이 필요합니다.")
+        return redirect(url_for('login'))
+
+    sender_id = session['user_id']
+    if sender_id == target_id:
+        flash("본인에게는 송금할 수 없습니다.")
+        return redirect(url_for('profile'))
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # 수신자 확인
+    cursor.execute("SELECT username FROM user WHERE id = ?", (target_id,))
+    target_user = cursor.fetchone()
+    if not target_user:
+        flash("존재하지 않는 사용자입니다.")
+        return redirect(url_for('dashboard'))
+
+    # 송신자 잔액 가져오기
+    cursor.execute("SELECT balance FROM user WHERE id = ?", (sender_id,))
+    sender_balance = cursor.fetchone()['balance']
+
+    if request.method == 'POST':
+        try:
+            amount = int(request.form['amount'])
+        except:
+            flash("올바른 금액을 입력해주세요.")
+            return redirect(url_for('transfer', target_id=target_id))
+
+        if amount <= 0:
+            flash("1원 이상 입력해주세요.")
+        elif amount > sender_balance:
+            flash("잔액이 부족합니다.")
+        else:
+            tx_id = str(uuid.uuid4())
+            timestamp = datetime.now().isoformat()
+
+            cursor.execute("UPDATE user SET balance = balance - ? WHERE id = ?", (amount, sender_id))
+            cursor.execute("UPDATE user SET balance = balance + ? WHERE id = ?", (amount, target_id))
+
+            cursor.execute("""
+                INSERT INTO transactions (id, sender_id, receiver_id, amount, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, (tx_id, sender_id, target_id, amount, timestamp))
+
+            db.commit()
+            flash(f"{target_user['username']}님에게 {amount}원을 송금했습니다.")
+            return redirect(url_for('transfer', target_id=target_id))
+
+    return render_template(
+        'transfer.html',
+        target_id=target_id,
+        target_name=target_user['username'],
+        balance=sender_balance
+    )
+
 
 # 판매자 정보 보기
 @app.route('/user/<user_id>')
@@ -426,7 +486,6 @@ def chat(user_id):
 
 
 # 신고하기
-# 신고하기
 @app.route('/report', methods=['GET', 'POST'])
 def report():
     if 'user_id' not in session:
@@ -479,6 +538,7 @@ def report():
         return redirect(url_for('dashboard'))
 
     return render_template('report.html', target_id=target_id)
+
 
 
 # 관리자 페이지 (신고 내용 조회)

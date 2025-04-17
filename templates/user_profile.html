@@ -21,6 +21,13 @@
   </a>
 {% endif %}
 
+{% if session.get('user_id') != user.id %}
+  <a href="{{ url_for('transfer', target_id=user.id) }}">
+    <button>💸 송금하기</button>
+  </a>
+{% else %}
+  <p><strong>보유 금액:</strong> {{ balance }}원</p>
+{% endif %}
 
 <a href="{{ url_for('report', target_id=user.id) }}">
     <button style="background-color: red; color: white;">🚨 신고하기</button>
