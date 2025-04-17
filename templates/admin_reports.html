@@ -19,7 +19,7 @@
     <td>{{ r.reason }}</td>
     <td>
       <form method="POST" action="{{ url_for('delete_report', report_id=r.id) }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</button>
       </form>
     </td>

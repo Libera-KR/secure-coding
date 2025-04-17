@@ -3,7 +3,7 @@
 {% block content %}
 <h2>신고하기</h2>
 <form method="post">
-  {{ csrf_token() }}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   {% if target_id %}
     <input type="hidden" name="target_id" value="{{ target_id }}">
     신고 대상: <strong>{{ target_id }}</strong></p>
