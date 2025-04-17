@@ -3,7 +3,7 @@
 
 {% block content %}
 <h2>{{ user.username | e}}님의 프로필</h2>
-<p><strong>사용자 ID:</strong> {{ user.id | e}}</p>
+<p><strong>사용자 명:</strong> {{ user.username | e}}</p>
 <p><strong>소개글:</strong> {{ user.bio or '소개글 없음' | e}}</p>
 
 <h3>등록한 상품 목록</h3>

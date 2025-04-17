@@ -512,51 +512,59 @@ def report():
         return redirect(url_for('login'))
 
     target_id = request.args.get('target_id', '')
+    db = get_db()
+    cursor = db.cursor()
+
+    # 사용자 이름 가져오기
+    target_name = target_id
+    if target_id:
+        cursor.execute("SELECT username FROM user WHERE id = ?", (target_id,))
+        user_result = cursor.fetchone()
+        if user_result:
+            target_name = user_result['username']
 
     if request.method == 'POST':
         reporter_id = session['user_id']
-        target_id_form = request.form['target_id'].strip()
+        reported_id = request.form['target_id'].strip()
         reason = request.form['reason'].strip()
 
-        if not target_id_form or not reason:
+        if not reported_id or not reason:
             flash("신고 대상과 사유는 필수입니다.")
             return redirect(url_for('report'))
 
         report_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
 
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute("""
-            INSERT INTO report (id, reporter_id, target_id, reason)
-            VALUES (?, ?, ?, ?)
-        """, (report_id, reporter_id, target_id_form, reason))
-        db.commit()
+        try:
+            with db:
+                cursor.execute("""
+                    INSERT INTO report (id, reporter_id, reported_id, reason, timestamp)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (report_id, reporter_id, reported_id, reason, timestamp))
 
-        # 신고 처리 후 누적 횟수 확인 및 조치
-        cursor.execute("""
-            SELECT COUNT(*) as count FROM report WHERE target_id = ?
-        """, (target_id_form,))
-        count = cursor.fetchone()['count']
+                cursor.execute("SELECT COUNT(*) as count FROM report WHERE reported_id = ?", (reported_id,))
+                count = cursor.fetchone()['count']
 
-        # 신고 대상이 사용자일 경우
-        cursor.execute("SELECT * FROM user WHERE id = ?", (target_id_form,))
-        target_user = cursor.fetchone()
-        if target_user and count >= 3 and target_user['status'] != 'suspended':
-            cursor.execute("UPDATE user SET status = 'suspended' WHERE id = ?", (target_id_form,))
-            flash("해당 유저는 신고 누적으로 휴먼 계정으로 전환되었습니다.")
+                cursor.execute("SELECT * FROM user WHERE id = ?", (reported_id,))
+                target_user = cursor.fetchone()
+                if target_user and count >= 3 and target_user['status'] != 'suspended':
+                    cursor.execute("UPDATE user SET status = 'suspended' WHERE id = ?", (reported_id,))
+                    flash("해당 유저는 신고 누적으로 휴먼 계정으로 전환되었습니다.")
 
-        # 신고 대상이 상품일 경우
-        cursor.execute("SELECT * FROM product WHERE id = ?", (target_id_form,))
-        target_product = cursor.fetchone()
-        if target_product and count >= 3 and not target_product['is_blocked']:
-            cursor.execute("UPDATE product SET is_blocked = 1 WHERE id = ?", (target_id_form,))
-            flash("해당 상품은 신고 누적으로 차단되었습니다.")
+                cursor.execute("SELECT * FROM product WHERE id = ?", (reported_id,))
+                target_product = cursor.fetchone()
+                if target_product and count >= 3 and not target_product['is_blocked']:
+                    cursor.execute("UPDATE product SET is_blocked = 1 WHERE id = ?", (reported_id,))
+                    flash("해당 상품은 신고 누적으로 차단되었습니다.")
 
-        db.commit()
-        flash("신고가 접수되었습니다.")
-        return redirect(url_for('dashboard'))
+            flash("신고가 접수되었습니다.")
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            db.rollback()
+            flash("신고 처리 중 오류가 발생했습니다.")
 
-    return render_template('report.html', target_id=target_id)
+    return render_template('report.html', target_id=target_id, target_name=target_name)
+
 
 
 
