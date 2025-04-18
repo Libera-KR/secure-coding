@@ -15,7 +15,15 @@
     {% else %}
       알 수 없음
     {% endif %}
-  </p>
+</p>
+
+{% if product.is_sold %}
+  <button disabled>판매 완료</button>
+{% elif product.seller_id == session['user_id'] %}
+  <button disabled>내 상품입니다</button>
+{% else %}
+  <a href="{{ url_for('purchase', product_id=product.id) }}"><button>결제하기</button></a>
+{% endif %}
 
 {% if session.get('user_id') == product.seller_id %}
   <a href="{{ url_for('edit_product', product_id=product.id) }}">✏️ 수정</a>

@@ -232,6 +232,7 @@ def profile():
     
     return render_template('profile.html', user=current_user, balance=current_user['balance'])
 
+#송금 기능
 @app.route('/transfer/<target_id>', methods=['GET', 'POST'])
 def transfer(target_id):
     if 'user_id' not in session:
@@ -331,10 +332,16 @@ def new_product():
         return redirect(url_for('login'))
     
     if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        price = request.form['price']
+        title = request.form['title'].strip()
+        description = request.form['description'].strip()
+        price_raw = request.form['price'].strip()
         file = request.files.get('image')
+
+        if not price_raw.isdigit():
+            flash("가격은 숫자만 입력해야 합니다.")
+            return redirect(url_for('new_product'))
+
+        price = int(price_raw)
 
         image_path = None
         if file and allowed_file(file.filename):
@@ -381,6 +388,7 @@ def view_product(product_id):
     seller = cursor.fetchone()
     return render_template('view_product.html', product=product, seller=seller)
 
+# 상품 정보 수정
 @app.route('/product/<product_id>/edit', methods=['GET', 'POST'])
 def edit_product(product_id):
     if 'user_id' not in session:
@@ -423,7 +431,73 @@ def edit_product(product_id):
 
     return render_template('edit_product.html', product=product)
 
+# 상품 결제하기
+@app.route('/purchase/<product_id>', methods=['GET', 'POST'])
+def purchase(product_id):
+    if 'user_id' not in session:
+        flash("로그인이 필요합니다.")
+        return redirect(url_for('login'))
 
+    db = get_db()
+    cursor = db.cursor()
+
+    # 상품 존재 여부 확인
+    cursor.execute("SELECT * FROM product WHERE id = ?", (product_id,))
+    product = cursor.fetchone()
+
+    if not product:
+        flash("존재하지 않는 상품입니다.")
+        return redirect(url_for('dashboard'))
+
+    # 본인 상품 차단
+    if product['seller_id'] == session['user_id']:
+        flash("본인의 상품은 구매할 수 없습니다.")
+        return redirect(url_for('dashboard'))
+
+    # 판매 완료 여부 확인
+    if product['is_sold']:
+        flash("이미 판매된 상품입니다.")
+        return redirect(url_for('dashboard'))
+
+    # 구매자 잔액 확인
+    buyer_id = session['user_id']
+    cursor.execute("SELECT balance FROM user WHERE id = ?", (buyer_id,))
+    buyer_balance = cursor.fetchone()['balance']
+    price = product['price']
+
+    if request.method == 'POST':
+        # 잔액 부족 처리
+        if int(buyer_balance) < int(price):
+            flash("잔액이 부족합니다.")
+            return redirect(url_for('purchase', product_id=product_id))
+
+        try:
+            with db:
+                # 구매자 잔액 차감
+                cursor.execute("UPDATE user SET balance = balance - ? WHERE id = ?", (price, buyer_id))
+                # 판매자 잔액 증가
+                cursor.execute("UPDATE user SET balance = balance + ? WHERE id = ?", (price, product['seller_id']))
+                # 거래 기록 저장
+                tx_id = str(uuid.uuid4())
+                timestamp = datetime.now().isoformat()
+                cursor.execute("""
+                    INSERT INTO transactions (id, sender_id, receiver_id, amount, timestamp)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (tx_id, buyer_id, product['seller_id'], price, timestamp))
+                # 상품 판매 상태로 변경
+                cursor.execute("UPDATE product SET is_sold = 1 WHERE id = ?", (product_id,))
+            flash("결제가 완료되었습니다.")
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            db.rollback()
+            flash("결제 처리 중 오류가 발생했습니다.")
+            print(f"[결제 오류] {e}")
+
+    return render_template("purchase.html", product=product, balance=buyer_balance)
+
+
+
+# 상품 삭제하기
 @app.route('/product/<product_id>/delete', methods=['POST'])
 def delete_product(product_id):
     if 'user_id' not in session:

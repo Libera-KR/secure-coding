@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>결제 확인</h2>
+  <p><strong>상품명:</strong> {{ product.title | e }}</p>
+  <p><strong>가격:</strong> {{ product.price | e }} 원</p>
+  <p><strong>내 잔액:</strong> {{ balance | e }} 원</p>
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <button type="submit">결제하기</button>
+  </form>
+
+  <a href="{{ url_for('view_product', product_id=product.id) }}">← 상품 페이지로 돌아가기</a>
+{% endblock %}
