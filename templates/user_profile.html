@@ -25,8 +25,6 @@
   <a href="{{ url_for('transfer', target_id=user.id) }}">
     <button>💸 송금하기</button>
   </a>
-{% else %}
-  <p><strong>보유 금액:</strong> {{ balance | e}}원</p>
 {% endif %}
 
 <a href="{{ url_for('report', target_id=user.id) }}">
