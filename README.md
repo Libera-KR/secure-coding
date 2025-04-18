@@ -10,6 +10,7 @@ if you don't have a miniconda(or anaconda), you can install it on this url. - ht
 
 ```
 git clone https://github.com/Libera-KR/secure-coding
+cd secure-coding
 conda env create -f enviroments.yaml
 ```
 
