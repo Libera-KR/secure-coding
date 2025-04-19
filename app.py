@@ -28,7 +28,7 @@ app.config.update(
 
 @app.after_request
 def set_security_headers(response):
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self';"
+    # response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self';"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
@@ -768,7 +768,4 @@ def handle_send_message_event(data):
 
 if __name__ == '__main__':
     init_db()  # 앱 컨텍스트 내에서 테이블 생성
-    ssl_context = ('cert.pem', 'key.pem')
-
-    socketio.run(app, host='0.0.0.0', port=5001, debug=False, ssl_context=ssl_context)
-    #socketio.run(app, debug=True)
+    socketio.run(app, debug=True)
