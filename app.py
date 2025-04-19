@@ -139,27 +139,88 @@ def register():
     return render_template('register.html')
 
 # 로그인
+from datetime import datetime, timedelta
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         raw_password = request.form['password']
-        
+
         db = get_db()
         cursor = db.cursor()
         cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
         user = cursor.fetchone()
-        if user and bcrypt.checkpw(raw_password.encode('utf-8'), user['password']):
-            if user['status'] == 'suspended':
-                flash("휴먼 계정으로 전환된 상태입니다. 로그인할 수 없습니다.")
+
+        if user:
+            now = datetime.now()
+            locked_until = user['locked_until']
+            if locked_until:
+                try:
+                    locked_time = datetime.fromisoformat(locked_until)
+                    if now < locked_time:
+                        flash("로그인 시도 제한 중입니다. 잠시 후 다시 시도하세요.")
+                        return redirect(url_for('login'))
+                except ValueError:
+                    pass  # locked_until 필드가 비어있거나 잘못된 경우 무시
+
+            if bcrypt.checkpw(raw_password.encode('utf-8'), user['password']):
+                if user['status'] == 'suspended':
+                    flash("해당 계정은 휴면계정입니다. 로그인할 수 없습니다.")
+                    return redirect(url_for('login'))
+
+                # 로그인 성공: 실패 횟수 초기화
+                cursor.execute("""
+                    UPDATE user SET failed_attempts = 0, locked_until = NULL WHERE id = ?
+                """, (user['id'],))
+
+                session['user_id'] = user['id']
+                session['role'] = user['role']
+                flash('로그인 성공!')
+                db.commit()
+                return redirect(url_for('dashboard'))
+            else:
+                # 비밀번호 틀림 → 실패 횟수 증가
+                attempts = user['failed_attempts'] + 1
+                locked_until = None
+
+                # ★ lock_count 읽기 (기존 필드 없을 시 0 처리)
+                lock_count = user['lock_count'] if user['lock_count'] is not None else 0
+
+                if attempts >= 5:
+                    locked_until = (now + timedelta(minutes=5)).isoformat()
+                    attempts = 0  # 실패 횟수 초기화
+                    lock_count += 1
+
+                    # ★ 휴면계정 전환 조건
+                    if lock_count >= 3 and user['status'] != 'suspended':
+                        cursor.execute("UPDATE user SET status = 'suspended' WHERE id = ?", (user['id'],))
+
+                        # ★ 자동 신고 등록 (관리자가 조회 가능하도록)
+                        report_id = str(uuid.uuid4())
+                        cursor.execute("""
+                            INSERT INTO report (id, reporter_id, reported_id, reason, timestamp)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (
+                            report_id,
+                            'system',  # 자동 시스템 처리
+                            user['id'],
+                            '로그인 잠금 3회',
+                            datetime.now().isoformat()
+                        ))
+
+                 # 실패 횟수와 잠금 상태 갱신 (lock_count도 함께)
+                cursor.execute("""
+                    UPDATE user SET failed_attempts = ?, locked_until = ?, lock_count = ? WHERE id = ?
+                """, (attempts, locked_until, lock_count, user['id']))
+                db.commit()
+
+                flash("아이디 또는 비밀번호가 올바르지 않습니다.")
                 return redirect(url_for('login'))
-            session['user_id'] = user['id']
-            session['role'] = user['role']
-            flash('로그인 성공!')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('아이디 또는 비밀번호가 올바르지 않습니다.')
-            return redirect(url_for('login'))
+
+        flash("아이디 또는 비밀번호가 올바르지 않습니다.")
+        return redirect(url_for('login'))
+
     return render_template('login.html')
 
 # 로그아웃
