@@ -26,6 +26,17 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax'   # 외부 사이트에서의 쿠키 전송 제한 (추천: 'Lax')
 )
 
+@app.after_request
+def set_security_headers(response):
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self';"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    return response
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
@@ -757,4 +768,7 @@ def handle_send_message_event(data):
 
 if __name__ == '__main__':
     init_db()  # 앱 컨텍스트 내에서 테이블 생성
-    socketio.run(app, debug=True)
+    ssl_context = ('cert.pem', 'key.pem')
+
+    socketio.run(app, host='0.0.0.0', port=5001, debug=False, ssl_context=ssl_context)
+    #socketio.run(app, debug=True)
