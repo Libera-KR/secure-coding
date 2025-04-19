@@ -8,6 +8,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label for="amount">금액:</label>
   <input type="number" name="amount" required min="1" required maxlength="50">
+  <input type="password" name="password" placeholder="Enter your password" required required min="1" required maxlength="50">
   <button type="submit">송금</button>
 </form>
 

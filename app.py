@@ -7,6 +7,8 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from functools import wraps
 from flask_wtf.csrf import CSRFProtect
+from datetime import timedelta
+
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'
@@ -17,11 +19,18 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 csrf = CSRFProtect(app)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,   # JS에서 쿠키 접근 차단
     SESSION_COOKIE_SECURE=True,     # HTTPS일 때만 쿠키 전송 (개발 시 False 가능)
     SESSION_COOKIE_SAMESITE='Lax'   # 외부 사이트에서의 쿠키 전송 제한 (추천: 'Lax')
 )
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=30)
+
 
 # CSRF 토큰 예외처리
 @app.errorhandler(400)
@@ -263,6 +272,16 @@ def transfer(target_id):
             amount = int(request.form['amount'])
         except:
             flash("올바른 금액을 입력해주세요.")
+            return redirect(url_for('transfer', target_id=target_id))
+
+        password = request.form.get('password', '').strip()
+
+        # 비밀번호 확인
+        cursor.execute("SELECT password FROM user WHERE id = ?", (sender_id,))
+        stored_hash = cursor.fetchone()['password']
+
+        if not bcrypt.checkpw(password.encode(), stored_hash.encode()):
+            flash("Incorrect password.")
             return redirect(url_for('transfer', target_id=target_id))
 
         if amount <= 0:
